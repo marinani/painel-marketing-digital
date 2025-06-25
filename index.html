@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PW Métricas - Google Ads</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Cores em tons de laranja para painel administrativo */
+        :root {
+            --pw-orange-light: #FED7AA; /* Laranja claro */
+            --pw-orange-medium: #FB923C; /* Laranja médio */
+            --pw-orange-dark: #EA580C; /* Laranja escuro */
+            --pw-orange-deeper: #C2410C; /* Laranja mais escuro */
+            --pw-gradient: linear-gradient(135deg, #FB923C, #EA580C);
+            --pw-sidebar-gradient: linear-gradient(to bottom, #FB923C, #EA580C);
+            --pw-dark: #1F2937;
+            --pw-light-gray: #F9FAFB;
+        }
+
+        .bg-orange-gradient { background: var(--pw-gradient); }
+        .bg-sidebar-gradient { background: var(--pw-sidebar-gradient); }
+        .text-orange-primary { color: var(--pw-orange-dark); }
+        .border-orange-primary { border-color: var(--pw-orange-medium); }
+        .hover-orange:hover { background-color: rgba(251, 146, 60, 0.1); }
+        
+        .sidebar-shadow {
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+          .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilos para sidebar redimensionável */
+        .sidebar {
+            min-width: 60px;
+            max-width: 400px;
+            width: 256px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar.collapsed .sidebar-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .logo img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: rgba(251, 146, 60, 0.3);
+            cursor: col-resize;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar:hover .resize-handle {
+            opacity: 1;
+        }
+
+        .resize-handle:hover {
+            background: rgba(251, 146, 60, 0.6);
+        }
+
+        .toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: -12px;
+            background: var(--pw-gradient);
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            z-index: 10;
+            transition: transform 0.3s;
+        }        .sidebar.collapsed .toggle-btn {
+            transform: rotate(180deg);
+        }
+
+        /* Responsividade para telas menores */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 50;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s ease, visibility 0.3s ease;
+            }
+
+            .mobile-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .toggle-btn {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+        }        @media (min-width: 769px) {
+            .mobile-menu-btn {
+                display: none;
+            }
+        }
+
+        .mobile-menu-btn {
+            display: none;
+        }
+
+        /* Melhorias para tabela responsiva */
+        @media (max-width: 640px) {
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .campaigns-table {
+                min-width: 600px;
+            }
+            
+            .campaigns-table th,
+            .campaigns-table td {
+                min-width: 120px;
+                white-space: nowrap;
+            }
+            
+            .campaigns-table th:first-child,
+            .campaigns-table td:first-child {
+                min-width: 200px;
+                position: sticky;
+                left: 0;
+                background: white;
+                z-index: 10;
+            }
+            
+            .campaigns-table th:first-child {
+                background: #f9fafb;
+            }
+            
+            .campaigns-table td:last-child,
+            .campaigns-table th:last-child {
+                position: sticky;
+                right: 0;
+                background: white;
+                z-index: 10;
+            }
+            
+            .campaigns-table th:last-child {
+                background: #f9fafb;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .campaigns-table th,
+            .campaigns-table td {
+                padding: 8px !important;
+                font-size: 12px;
+            }
+            
+            .campaigns-table .campaign-name {
+                font-size: 13px;
+            }
+            
+            .campaigns-table .campaign-meta {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-gray-50">    <!-- Layout com sidebar e conteúdo principal -->
+    <div class="flex h-screen">
+        <!-- Mobile Overlay -->
+        <div id="mobileOverlay" class="mobile-overlay" onclick="closeMobileSidebar()"></div>
+        
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar bg-sidebar-gradient sidebar-shadow flex flex-col">
+            <!-- Toggle Button -->
+            <div class="toggle-btn" onclick="toggleSidebar()">
+                <i class="fas fa-chevron-left"></i>
+            </div>
+            
+            <!-- Resize Handle -->
+            <div class="resize-handle" id="resizeHandle"></div>
+
+            <!-- Logo -->
+            <div class="p-6 border-b border-orange-200 border-opacity-30 logo">
+                <div class="flex items-center">
+                    <img src="/assets/images/logo_pwmidia.png" alt="PW Métricas Logo" class="h-12 w-auto transition-all duration-300">
+                </div>
+            </div>
+
+            <!-- Menu Navigation -->
+            <nav class="flex-1 py-6">
+                <div class="px-6">
+                    <h3 class="text-xs uppercase text-orange-100 font-semibold mb-4 sidebar-text">Menu Principal</h3>
+                </div>
+                <ul class="space-y-2 px-4">
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-white bg-orange-600 bg-opacity-30 rounded-lg font-medium" title="Campanhas Google Ads">
+                            <i class="fas fa-chart-line mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Campanhas Google Ads</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-orange-100 hover-orange rounded-lg transition duration-200" title="Relatórios">
+                            <i class="fas fa-chart-bar mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Relatórios</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-orange-100 hover-orange rounded-lg transition duration-200" title="Configurações">
+                            <i class="fas fa-cog mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Configurações</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-orange-100 hover-orange rounded-lg transition duration-200" title="Contas">
+                            <i class="fas fa-users mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Contas</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="px-6 mt-8">
+                    <h3 class="text-xs uppercase text-orange-100 font-semibold mb-4 sidebar-text">Ferramentas</h3>
+                </div>
+                <ul class="space-y-2 px-4">
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-orange-100 hover-orange rounded-lg transition duration-200" title="Exportar Dados">
+                            <i class="fas fa-download mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Exportar Dados</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-orange-100 hover-orange rounded-lg transition duration-200" title="Agendamentos">
+                            <i class="fas fa-calendar mr-3 flex-shrink-0"></i>
+                            <span class="sidebar-text">Agendamentos</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-6 border-t border-orange-200 border-opacity-30">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-orange-800"></i>
+                    </div>
+                    <div class="ml-3 sidebar-text">
+                        <p class="text-white text-sm font-medium">Admin User</p>
+                        <p class="text-orange-100 text-xs">admin@pwmidia.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-h-screen main-content">
+            <!-- Top Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 p-4 md:p-6 flex-shrink-0">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button onclick="openMobileSidebar()" class="mobile-menu-btn mr-4 text-gray-500 hover:text-gray-700 md:hidden">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <div>
+                            <h1 class="text-xl md:text-2xl font-bold text-gray-900">Campanhas Google Ads</h1>
+                            <p class="text-gray-600 mt-1 text-sm md:text-base">Gerencie e monitore suas campanhas publicitárias</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 md:space-x-4">
+                        <button class="bg-orange-gradient text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium hover:opacity-90 transition duration-200 text-xs md:text-sm">
+                            <i class="fas fa-plus mr-1 md:mr-2"></i>
+                            <span class="hidden sm:inline">Nova Campanha</span>
+                            <span class="sm:hidden">Nova</span>
+                        </button>
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-bell text-lg md:text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>            <!-- Stats Cards -->
+            <div class="p-4 md:p-6 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 flex-shrink-0">
+                <div class="bg-white rounded-lg p-4 md:p-6 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-xs md:text-sm">Campanhas Ativas</p>
+                            <p class="text-lg md:text-2xl font-bold text-gray-900">24</p>
+                        </div>
+                        <div class="bg-green-100 p-2 md:p-3 rounded-lg">
+                            <i class="fas fa-play text-green-600 text-sm md:text-base"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 md:p-6 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-xs md:text-sm">Impressões Hoje</p>
+                            <p class="text-lg md:text-2xl font-bold text-gray-900">145.2K</p>
+                        </div>
+                        <div class="bg-blue-100 p-2 md:p-3 rounded-lg">
+                            <i class="fas fa-eye text-blue-600 text-sm md:text-base"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 md:p-6 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-xs md:text-sm">Cliques Hoje</p>
+                            <p class="text-lg md:text-2xl font-bold text-gray-900">3.2K</p>
+                        </div>
+                        <div class="bg-orange-100 p-2 md:p-3 rounded-lg">
+                            <i class="fas fa-mouse-pointer text-orange-600 text-sm md:text-base"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 md:p-6 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-xs md:text-sm">CPC Médio</p>
+                            <p class="text-lg md:text-2xl font-bold text-gray-900">R$ 1.45</p>
+                        </div>
+                        <div class="bg-purple-100 p-2 md:p-3 rounded-lg">
+                            <i class="fas fa-dollar-sign text-purple-600 text-sm md:text-base"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaigns Table -->
+            <div class="flex-1 px-4 md:p-6 pb-4 md:pb-6 overflow-hidden">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
+                    <div class="p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+                        <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-3 md:space-y-0">
+                            <h2 class="text-lg font-semibold text-gray-900">Lista de Campanhas</h2>
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                                <select class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option>Todas as campanhas</option>
+                                    <option>Ativas</option>
+                                    <option>Pausadas</option>
+                                    <option>Concluídas</option>
+                                </select>
+                                <input type="text" placeholder="Buscar campanhas..." class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full sm:w-64">
+                            </div>
+                        </div>
+                    </div>                    <div class="flex-1 overflow-auto table-container">
+                        <div class="min-w-full">
+                            <table class="w-full campaigns-table">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campanha</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Status</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Impressões</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Cliques</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">CPC Médio</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Conversões</th>
+                                        <th class="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50 transition duration-200">
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <div class="campaign-name text-sm font-medium text-gray-900">Campanha Black Friday 2025</div>
+                                            <div class="campaign-meta text-xs md:text-sm text-gray-500">E-commerce • 15/11/2025</div>
+                                            <div class="sm:hidden mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">45.2K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">1.2K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">R$ 1.85</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">89</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <button onclick="verDetalhes('campaign1')" class="bg-orange-gradient text-white px-2 py-1 md:px-3 md:py-1 rounded text-xs font-medium hover:opacity-90 transition duration-200">
+                                                <span class="hidden sm:inline">Ver Detalhes</span>
+                                                <span class="sm:hidden"><i class="fas fa-eye"></i></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition duration-200">
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <div class="campaign-name text-sm font-medium text-gray-900">Promoção Natal Premium</div>
+                                            <div class="campaign-meta text-xs md:text-sm text-gray-500">Varejo • 20/11/2025</div>
+                                            <div class="sm:hidden mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">32.1K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">890</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">R$ 2.15</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">67</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <button onclick="verDetalhes('campaign2')" class="bg-orange-gradient text-white px-2 py-1 md:px-3 md:py-1 rounded text-xs font-medium hover:opacity-90 transition duration-200">
+                                                <span class="hidden sm:inline">Ver Detalhes</span>
+                                                <span class="sm:hidden"><i class="fas fa-eye"></i></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition duration-200">
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <div class="campaign-name text-sm font-medium text-gray-900">Lançamento Produto X</div>
+                                            <div class="campaign-meta text-xs md:text-sm text-gray-500">Tecnologia • 10/11/2025</div>
+                                            <div class="sm:hidden mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pausada</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pausada</span>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">28.7K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">645</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">R$ 3.20</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">34</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <button onclick="verDetalhes('campaign3')" class="bg-orange-gradient text-white px-2 py-1 md:px-3 md:py-1 rounded text-xs font-medium hover:opacity-90 transition duration-200">
+                                                <span class="hidden sm:inline">Ver Detalhes</span>
+                                                <span class="sm:hidden"><i class="fas fa-eye"></i></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition duration-200">
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <div class="campaign-name text-sm font-medium text-gray-900">Curso Online Marketing</div>
+                                            <div class="campaign-meta text-xs md:text-sm text-gray-500">Educação • 05/11/2025</div>
+                                            <div class="sm:hidden mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativa</span>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">19.5K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">420</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">R$ 1.95</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">28</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <button onclick="verDetalhes('campaign4')" class="bg-orange-gradient text-white px-2 py-1 md:px-3 md:py-1 rounded text-xs font-medium hover:opacity-90 transition duration-200">
+                                                <span class="hidden sm:inline">Ver Detalhes</span>
+                                                <span class="sm:hidden"><i class="fas fa-eye"></i></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition duration-200">
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <div class="campaign-name text-sm font-medium text-gray-900">App Fitness Premium</div>
+                                            <div class="campaign-meta text-xs md:text-sm text-gray-500">Saúde • 01/11/2025</div>
+                                            <div class="sm:hidden mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Concluída</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Concluída</span>
+                                        </td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">52.3K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">1.8K</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">R$ 1.60</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">142</td>
+                                        <td class="px-3 md:px-6 py-4 whitespace-nowrap">
+                                            <button onclick="verDetalhes('campaign5')" class="bg-orange-gradient text-white px-2 py-1 md:px-3 md:py-1 rounded text-xs font-medium hover:opacity-90 transition duration-200">
+                                                <span class="hidden sm:inline">Ver Detalhes</span>
+                                                <span class="sm:hidden">Ver</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="px-4 md:px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                        <div class="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+                            <p class="text-sm text-gray-700">Mostrando <span class="font-medium">1</span> a <span class="font-medium">5</span> de <span class="font-medium">24</span> resultados</p>
+                            <div class="flex space-x-2">
+                                <button class="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-100">Anterior</button>
+                                <button class="px-2 md:px-3 py-1 text-xs md:text-sm bg-orange-gradient text-white rounded">1</button>
+                                <button class="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-100">2</button>
+                                <button class="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-100">3</button>
+                                <button class="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-100">Próximo</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><script>
+        // Variáveis para controle do sidebar
+        let isResizing = false;
+        const sidebar = document.getElementById('sidebar');
+        const resizeHandle = document.getElementById('resizeHandle');
+
+        // Função para toggle do sidebar
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+            
+            // Salvar estado no localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        // Função para redimensionar o sidebar
+        function initResizable() {
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                e.preventDefault();
+            });
+
+            function handleMouseMove(e) {
+                if (!isResizing) return;
+                
+                const newWidth = e.clientX;
+                if (newWidth >= 60 && newWidth <= 400) {
+                    sidebar.style.width = newWidth + 'px';
+                    
+                    // Se a largura for muito pequena, colapsar automaticamente
+                    if (newWidth < 120) {
+                        sidebar.classList.add('collapsed');
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                    }
+                }
+            }
+
+            function handleMouseUp() {
+                isResizing = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                
+                // Salvar largura no localStorage
+                localStorage.setItem('sidebarWidth', sidebar.style.width);
+            }
+        }        // Restaurar estado do sidebar
+        function restoreSidebarState() {
+            const savedWidth = localStorage.getItem('sidebarWidth');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (savedWidth) {
+                sidebar.style.width = savedWidth;
+            }
+            
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+
+        // Funções para sidebar mobile
+        function openMobileSidebar() {
+            sidebar.classList.add('mobile-open');
+            document.getElementById('mobileOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileSidebar() {
+            sidebar.classList.remove('mobile-open');
+            document.getElementById('mobileOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Detectar mudança de tamanho da tela
+        function handleResize() {
+            if (window.innerWidth >= 769) {
+                closeMobileSidebar();
+                document.body.style.overflow = '';
+            }
+        }
+
+        function verDetalhes(campaignId) {
+            // Redireciona para a página de detalhes da campanha
+            console.log(`Visualizando detalhes da campanha: ${campaignId}`);
+            
+            // Simulação dos dados da campanha para mostrar o que seria enviado
+            const campaignData = {
+                campaign1: {
+                    name: 'Campanha Black Friday 2025',
+                    status: 'Ativa',
+                    impressions: '45.2K',
+                    clicks: '1.2K',
+                    cpc: 'R$ 1.85',
+                    conversions: '89',
+                    ctr: '2.65%',
+                    budget: 'R$ 5.000',
+                    startDate: '15/11/2025',
+                    endDate: '30/11/2025'
+                },
+                campaign2: {
+                    name: 'Promoção Natal Premium',
+                    status: 'Ativa',
+                    impressions: '32.1K',
+                    clicks: '890',
+                    cpc: 'R$ 2.15',
+                    conversions: '67',
+                    ctr: '2.77%',
+                    budget: 'R$ 3.500',
+                    startDate: '20/11/2025',
+                    endDate: '24/12/2025'
+                }
+                // Mais dados das campanhas...
+            };
+
+            // Em um sistema real, você redirecionaria para a página de detalhes
+            // passando o ID da campanha como parâmetro
+            window.location.href = `detalhes-campanha.html?id=${campaignId}`;
+            
+            // Ou poderia abrir um modal com os detalhes
+            // showCampaignModal(campaignData[campaignId]);
+        }
+
+        // Função para filtrar campanhas (pode ser implementada)
+        function filtrarCampanhas(status) {
+            console.log(`Filtrando campanhas por status: ${status}`);
+            // Implementar lógica de filtro aqui
+        }
+
+        // Função para buscar campanhas
+        function buscarCampanhas(termo) {
+            console.log(`Buscando campanhas com termo: ${termo}`);
+            // Implementar lógica de busca aqui
+        }        // Event listeners para interatividade
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar funcionalidades do sidebar
+            initResizable();
+            restoreSidebarState();
+
+            // Event listener para resize da tela
+            window.addEventListener('resize', handleResize);
+
+            // Adicionar event listener para o campo de busca
+            const searchInput = document.querySelector('input[placeholder="Buscar campanhas..."]');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    buscarCampanhas(e.target.value);
+                });
+            }
+
+            // Adicionar event listener para o select de filtro
+            const filterSelect = document.querySelector('select');
+            if (filterSelect) {
+                filterSelect.addEventListener('change', function(e) {
+                    filtrarCampanhas(e.target.value);
+                });
+            }
+
+            // Simular atualização dos dados em tempo real (opcional)
+            setInterval(function() {
+                // Aqui você poderia fazer uma chamada AJAX para atualizar os dados
+                // updateDashboardData();
+            }, 30000); // Atualizar a cada 30 segundos
+        });
+    </script>
+</body>
+</html>
